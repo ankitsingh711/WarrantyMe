@@ -21,12 +21,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import axios from '../config/axios';
 import { Letter } from '../types';
+import LoadingState from '../components/LoadingState';
 
 interface HomeState {
   letters: Letter[];
   loading: boolean;
   deleteDialog: boolean;
   selectedLetter: Letter | null;
+  error: string;
 }
 
 const Home: React.FC = () => {
@@ -34,7 +36,8 @@ const Home: React.FC = () => {
     letters: [],
     loading: true,
     deleteDialog: false,
-    selectedLetter: null
+    selectedLetter: null,
+    error: ''
   });
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -50,15 +53,53 @@ const Home: React.FC = () => {
   const fetchLetters = async (): Promise<void> => {
     try {
       const response = await axios.get<Letter[]>('/api/letters');
-      setState(prev => ({ ...prev, letters: response.data }));
+      setState(prev => ({ ...prev, letters: response.data, loading: false }));
     } catch (error) {
-      console.error('Error fetching letters:', error);
-    } finally {
-      setState(prev => ({ ...prev, loading: false }));
+      setState(prev => ({ 
+        ...prev, 
+        error: 'Error fetching letters',
+        loading: false 
+      }));
     }
   };
 
-  // ... rest of the component with proper types
+  const handleDeleteClick = (letter: Letter): void => {
+    setState(prev => ({ 
+      ...prev, 
+      selectedLetter: letter,
+      deleteDialog: true 
+    }));
+  };
+
+  const handleDeleteConfirm = async (): Promise<void> => {
+    try {
+      if (!state.selectedLetter) return;
+      
+      await axios.delete(`/api/letters/${state.selectedLetter._id}`);
+      setState(prev => ({
+        ...prev,
+        letters: prev.letters.filter(l => l._id !== prev.selectedLetter?._id),
+        deleteDialog: false,
+        selectedLetter: null
+      }));
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        error: 'Error deleting letter',
+        deleteDialog: false
+      }));
+    }
+  };
+
+  if (state.loading) {
+    return <LoadingState />;
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4 }}>
+      {/* Your existing JSX */}
+    </Container>
+  );
 };
 
 export default Home; 

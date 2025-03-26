@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Box, 
   TextField, 
@@ -14,19 +14,28 @@ import {
 import SaveIcon from '@mui/icons-material/Save';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { useNavigate, useParams } from 'react-router-dom';
 import axios from '../config/axios';
-import { useAutoSave } from '../hooks/useAutoSave';
-import { Letter } from '../types';
+import { EditorState, QuillConfig } from '../types/editor';
 
-interface EditorState {
-  title: string;
-  content: string;
-  error: string;
-  success: string;
-  loading: boolean;
-  saving: boolean;
-}
+const QUILL_CONFIG: QuillConfig = {
+  modules: {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      [{ align: [] }],
+      ['link'],
+      ['clean']
+    ]
+  },
+  formats: [
+    'header',
+    'bold', 'italic', 'underline', 'strike',
+    'list', 'bullet',
+    'align',
+    'link'
+  ]
+};
 
 const Editor: React.FC = () => {
   const [state, setState] = useState<EditorState>({
@@ -37,62 +46,87 @@ const Editor: React.FC = () => {
     loading: false,
     saving: false
   });
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
 
-  useEffect(() => {
-    if (id) {
-      fetchLetter();
+  const handleSave = async () => {
+    if (!state.title || !state.content) {
+      setState(prev => ({ ...prev, error: 'Please fill in both title and content' }));
+      return;
     }
-  }, [id]);
 
-  const fetchLetter = async (): Promise<void> => {
+    setState(prev => ({ ...prev, saving: true }));
+
     try {
-      setState(prev => ({ ...prev, loading: true }));
-      const response = await axios.get<Letter>(`/api/letters/${id}`);
-      setState(prev => ({
-        ...prev,
-        title: response.data.title,
-        content: response.data.content
-      }));
-    } catch (error) {
-      setState(prev => ({ ...prev, error: 'Error loading letter' }));
-    } finally {
-      setState(prev => ({ ...prev, loading: false }));
-    }
-  };
-
-  const handleSave = async (): Promise<void> => {
-    try {
-      if (!state.title || !state.content) {
-        setState(prev => ({ ...prev, error: 'Please fill in both title and content' }));
-        return;
-      }
-
-      setState(prev => ({ ...prev, saving: true }));
-      const endpoint = id ? `/api/letters/${id}` : '/api/letters';
-      const method = id ? 'put' : 'post';
-
-      await axios[method](endpoint, {
+      await axios.post('/api/letters', {
         title: state.title,
         content: state.content
       });
 
-      setState(prev => ({ ...prev, success: 'Letter saved successfully!' }));
-      if (!id) {
-        setTimeout(() => navigate('/'), 1500);
-      }
+      setState(prev => ({
+        ...prev,
+        saving: false,
+        success: 'Letter saved successfully'
+      }));
     } catch (error) {
       setState(prev => ({
         ...prev,
-        error: error.response?.data?.message || 'Error saving letter'
+        saving: false,
+        error: 'Error saving letter'
       }));
-    } finally {
-      setState(prev => ({ ...prev, saving: false }));
     }
   };
 
-  // ... rest of the component remains similar but with proper types
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <Paper sx={{ p: 3 }}>
+        <Box sx={{ mb: 3 }}>
+          <TextField
+            fullWidth
+            label="Title"
+            value={state.title}
+            onChange={(e) => setState(prev => ({ 
+              ...prev, 
+              title: e.target.value 
+            }))}
+            variant="outlined"
+          />
+        </Box>
+
+        <ReactQuill
+          theme="snow"
+          value={state.content}
+          onChange={(content) => setState(prev => ({ ...prev, content }))}
+          {...QUILL_CONFIG}
+        />
+
+        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={state.saving}
+            startIcon={state.saving ? <CircularProgress size={20} /> : <SaveIcon />}
+          >
+            {state.saving ? 'Saving...' : 'Save'}
+          </Button>
+        </Box>
+      </Paper>
+
+      <Snackbar 
+        open={!!state.error} 
+        autoHideDuration={6000} 
+        onClose={() => setState(prev => ({ ...prev, error: '' }))}
+      >
+        <Alert severity="error">{state.error}</Alert>
+      </Snackbar>
+
+      <Snackbar 
+        open={!!state.success} 
+        autoHideDuration={3000} 
+        onClose={() => setState(prev => ({ ...prev, success: '' }))}
+      >
+        <Alert severity="success">{state.success}</Alert>
+      </Snackbar>
+    </Container>
+  );
 };
 
 export default Editor; 

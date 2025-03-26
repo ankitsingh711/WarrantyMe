@@ -22,4 +22,17 @@ export interface AuthContextType {
   loading: boolean;
   login: () => void;
   logout: () => Promise<void>;
+}
+
+export interface ApiError {
+  message: string;
+  statusCode: number;
+  status: 'error';
+  stack?: string;
+}
+
+export interface ApiResponse<T> {
+  data: T;
+  message?: string;
+  status: 'success' | 'error';
 } 

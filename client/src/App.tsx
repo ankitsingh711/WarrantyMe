@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material';
+import { ThemeProvider, createTheme, Theme } from '@mui/material';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Editor from './pages/Editor';
@@ -8,7 +8,7 @@ import Login from './pages/Login';
 import { AuthProvider } from './contexts/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
-const theme = createTheme({
+const theme: Theme = createTheme({
   palette: {
     primary: {
       main: '#1976d2',

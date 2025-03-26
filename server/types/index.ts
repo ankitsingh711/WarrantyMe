@@ -25,3 +25,13 @@ export interface GoogleProfile {
   emails: Array<{ value: string }>;
   photos: Array<{ value: string }>;
 } 
+
+export enum UserRole {
+  USER = 'user',
+  ADMIN = 'admin'
+}
+
+export interface IUser {
+  // ... existing fields
+  role: UserRole;
+} 
